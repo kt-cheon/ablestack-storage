@@ -55,9 +55,11 @@ ADD ceph.defaults /opt/ceph-container/etc/
 # Copye sree web interface for cn
 # We use COPY instead of ADD for tarball so that it does not get extracted automatically at build time
 COPY Sree-0.2.tar.gz /opt/ceph-container/tmp/sree.tar.gz
+# ABLESTACK Branding
 COPY ablestack_color.png /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/assets/Ceph_Ceph_Logo_with_text_red_white.svg
 COPY ablestack_white.png /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/assets/Ceph_Ceph_Logo_with_text_white.svg
 COPY ablestack_logo.png /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/assets/Ceph_Logo.svg
+COPY index.html /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/
 
 # Modify the entrypoint
 RUN bash "/opt/ceph-container/bin/generate_entrypoint.sh" && \
