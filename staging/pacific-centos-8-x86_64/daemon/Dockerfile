@@ -12,16 +12,16 @@ LABEL ceph="True"
 LABEL RELEASE="master"
 
 # What was the url of the git repository
-LABEL GIT_REPO="https://github.com/ceph/ceph-container.git"
+LABEL GIT_REPO="https://github.com/kt-cheon/ablestack-storage.git"
 
 # What was the git branch used to build this container
 LABEL GIT_BRANCH="master"
 
 # What was the commit ID of the current HEAD
-LABEL GIT_COMMIT="50c62733fe9962908c16f14743ac0d9988ccdf06"
+LABEL GIT_COMMIT="607de43feb2a2d4626667a392bfe10377e9fb32d"
 
 # Was the repository clean when building ?
-LABEL GIT_CLEAN="True"
+LABEL GIT_CLEAN="False"
 
 # What CEPH_POINT_RELEASE has been used ?
 LABEL CEPH_POINT_RELEASE=""
@@ -165,11 +165,11 @@ ADD ceph.defaults /opt/ceph-container/etc/
 # Copye sree web interface for cn
 # We use COPY instead of ADD for tarball so that it does not get extracted automatically at build time
 COPY Sree-0.2.tar.gz /opt/ceph-container/tmp/sree.tar.gz
-COPY ablestack_Logo_with_text_color_white.svg /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/assets/Ceph_Ceph_Logo_with_text_red_white.svg
-COPY ablestack_Logo_with_text_white.svg /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/assets/Ceph_Ceph_Logo_with_text_white.svg
-COPY ablestack_cloud_Logo.svg /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/assets/Ceph_Logo.svg
-COPY favicon.ico /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/
-COPY index.html /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/
+# ABLESTACK Branding
+#COPY pngs/ablestack_color.png /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/assets/Ceph_Ceph_Logo_with_text_red_white.svg
+#COPY pngs/ablestack_white.png /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/assets/Ceph_Ceph_Logo_with_text_white.svg
+#COPY pngs/ablestack_logo.png /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/assets/Ceph_Logo.svg
+#COPY pngs/index.html /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/
 
 # Modify the entrypoint
 RUN bash "/opt/ceph-container/bin/generate_entrypoint.sh" && \
