@@ -1,6 +1,6 @@
 # CEPH DAEMON IMAGE
 
-FROM ceph/daemon-base:master-pacific-centos-8-x86_64
+FROM ceph/daemon-base:ablestack-allo-pacific-centos-8-x86_64
 
 # Who is the maintainer ?
 LABEL maintainer="Dimitri Savineau <dsavinea@redhat.com>"
@@ -9,16 +9,16 @@ LABEL maintainer="Dimitri Savineau <dsavinea@redhat.com>"
 LABEL ceph="True"
 
 # What is the actual release ? If not defined, this equals the git branch name
-LABEL RELEASE="master"
+LABEL RELEASE="ablestack-allo"
 
 # What was the url of the git repository
 LABEL GIT_REPO="https://github.com/kt-cheon/ablestack-storage.git"
 
 # What was the git branch used to build this container
-LABEL GIT_BRANCH="master"
+LABEL GIT_BRANCH="ablestack-allo"
 
 # What was the commit ID of the current HEAD
-LABEL GIT_COMMIT="607de43feb2a2d4626667a392bfe10377e9fb32d"
+LABEL GIT_COMMIT="e1160641db44c277ccb73f4ffb75ce55ac9a7df0"
 
 # Was the repository clean when building ?
 LABEL GIT_CLEAN="False"
