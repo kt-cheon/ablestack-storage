@@ -43,3 +43,9 @@ RUN \
     #
     # Verify that the packages installed haven't been accidentally cleaned
     __DOCKERFILE_VERIFY_PACKAGES__ && echo 'Packages verified successfully'
+COPY ablestack-branding/ablestack_color.png /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/assets/Ceph_Ceph_Logo_with_text_red_white.svg
+COPY ablestack-branding/ablestack_white.png /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/assets/Ceph_Ceph_Logo_with_text_white.svg
+COPY ablestack-branding/ablestack_logo.png /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/assets/Ceph_Logo.svg
+RUN \
+    sed -i 's/<title>Ceph<\/title>/<title>ABLESTACK<\/title>/' /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/index.html
+
