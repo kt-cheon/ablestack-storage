@@ -169,10 +169,11 @@ function start_mon {
       ceph-mon --setuser ceph --setgroup ceph --cluster "${CLUSTER}" -i "${MON_NAME}" --inject-monmap "$MONMAP" --keyring "$MON_KEYRING" --mon-data "$MON_DATA_DIR"
     fi
     if [[ "$CEPH_DAEMON" != demo ]]; then
-      v2v1=$(ceph-conf -c /etc/ceph/"${CLUSTER}".conf 'mon host' | tr ',' '\n' | grep -c "${MON_IP}")
+      MON_IP_NO_BRACKETS=$(echo "$MON_IP" | tr -d '[]')
+      v2v1=$(ceph-conf -c /etc/ceph/"${CLUSTER}".conf 'mon host' | tr ',' '\n' | grep -c "${MON_IP_NO_BRACKETS}")
       # in case of v2+v1 configuration : [v2:xxxx:3300,v1:xxxx:6789]
       if [ "${v2v1}" -eq 2 ]; then
-        timeout 7 ceph "${CLI_OPTS[@]}" mon add "${MON_NAME}" "${MON_IP}" || true
+        timeout 7 ceph "${CLI_OPTS[@]}" mon add "${MON_NAME}" "${MON_IP_NO_BRACKETS}" || true
       # with v2 only : [v2:xxxx:3300]
       else
         timeout 7 ceph "${CLI_OPTS[@]}" mon add "${MON_NAME}" "${MON_IP}":"${MON_PORT}" || true
@@ -185,6 +186,9 @@ function start_mon {
     if [[ ! "${CEPH_VERSION}" =~ ^(luminous|mimic)$ ]]; then
       if ! grep -qE "mon warn on pool no redundancy = false" /etc/ceph/"${CLUSTER}".conf; then
           echo "mon warn on pool no redundancy = false" >> /etc/ceph/"${CLUSTER}".conf
+      fi
+      if ! grep -qE "auth allow insecure global id reclaim = false" /etc/ceph/"${CLUSTER}".conf; then
+          echo "auth allow insecure global id reclaim = false" >> /etc/ceph/"${CLUSTER}".conf
       fi
     fi
     /usr/bin/ceph-mon "${DAEMON_OPTS[@]}" -i "${MON_NAME}" --mon-data "$MON_DATA_DIR" --public-addr "${MON_IP}"
