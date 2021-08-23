@@ -49,7 +49,8 @@ ADD *.sh check_zombie_mons.py ./osd_scenarios/* entrypoint.sh.in disabled_scenar
 
 # ABLESTACK Ceph-bronto install
 COPY ceph-bronto/ /ceph-bronto
-RUN yum install -y /ceph-bronto/*.rpm
+COPY /ceph-bronto/config /etc/selinux/config
+RUN dnf localinstall -y /ceph-bronto/*.rpm
 
 # Modify the entrypoint
 RUN bash "/opt/ceph-container/bin/generate_entrypoint.sh" && \
