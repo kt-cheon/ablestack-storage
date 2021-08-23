@@ -3,11 +3,7 @@ set -e
 
 unset "DAEMON_OPTS[${#DAEMON_OPTS[@]}-1]" # remove the last element of the array
 # the following ceph version can start with a numerical value where the new ones need a proper name
-if [[ "$CEPH_VERSION" == "luminous" ]]; then
-  MDS_NAME=0
-else
-  MDS_NAME=demo
-fi
+MDS_NAME=demo
 MDS_PATH="/var/lib/ceph/mds/${CLUSTER}-$MDS_NAME"
 RGW_PATH="/var/lib/ceph/radosgw/${CLUSTER}-rgw.${RGW_NAME}"
 # shellcheck disable=SC2153
@@ -28,17 +24,13 @@ MGR_IP=$MON_IP
 : "${RGW_FRONTEND_PORT:=8080}"
 : "${RGW_FRONTEND_TYPE:="beast"}"
 
-: "${RBD_POOL:="rbd"}"
-
 
 #######
 # MON #
 #######
 function bootstrap_mon {
-  if [[ ! "${CEPH_VERSION}" =~ ^(luminous|mimic)$ ]]; then
-    # shellcheck disable=SC2034
-    MON_PORT=3300
-  fi
+  # shellcheck disable=SC2034
+  MON_PORT=3300
   # shellcheck disable=SC1091
   source /opt/ceph-container/bin/start_mon.sh
   start_mon
@@ -73,8 +65,7 @@ function parse_size {
 }
 
 function bootstrap_osd {
-  # Apply the tuning on Nautilus and above only since the values applied are causing the ceph-osd to crash on earlier versions
-  if [[ ${OSD_BLUESTORE} -eq 1 ]] && [[ ! "${CEPH_VERSION}" =~ ^(luminous|mimic)$ ]]; then
+  if [[ ${OSD_BLUESTORE} -eq 1 ]]; then
     tune_memory "$(get_available_ram)"
   fi
 
@@ -133,7 +124,6 @@ ENDHERE
     # start OSD
     chown --verbose -R ceph. "$OSD_PATH"
     ceph-osd "${DAEMON_OPTS[@]}" -i "$OSD_ID"
-    ceph "${CLI_OPTS[@]}" osd pool create "$RBD_POOL" 8
   done
 }
 
@@ -150,7 +140,7 @@ function bootstrap_mds {
 
     # bootstrap MDS
     mkdir -p "$MDS_PATH"
-    ceph "${CLI_OPTS[@]}" auth get-or-create mds."$MDS_NAME" mds 'allow' osd 'allow *' mon 'allow profile mds' -o "$MDS_PATH"/keyring
+    ceph "${CLI_OPTS[@]}" auth get-or-create mds."$MDS_NAME" mds 'allow *' osd 'allow *' mon 'profile mds' mgr 'profile mds' -o "$MDS_PATH"/keyring
     chown --verbose -R ceph. "$MDS_PATH"
   fi
 
@@ -174,14 +164,6 @@ function bootstrap_rgw {
   fi
 
   : "${RGW_FRONTEND:="$RGW_FRONTEND_TYPE $RGW_FRONTED_OPTIONS"}"
-
-  if [[ "$RGW_FRONTEND_TYPE" == "beast" ]]; then
-    if [[ "$CEPH_VERSION" == "luminous" ]]; then
-      RGW_FRONTEND_TYPE=beast
-      log "ERROR: unsupported rgw backend type $RGW_FRONTEND_TYPE for your Ceph release $CEPH_VERSION, use at least the Mimic version."
-      exit 1
-    fi
-  fi
 
   if [ ! -e "$RGW_PATH"/keyring ]; then
     # bootstrap RGW
@@ -328,7 +310,7 @@ function bootstrap_rbd_mirror {
 #######
 function bootstrap_mgr {
   mkdir -p "$MGR_PATH"
-  ceph "${CLI_OPTS[@]}" auth get-or-create mgr."$MGR_NAME" mon 'allow *' -o "$MGR_PATH"/keyring
+  ceph "${CLI_OPTS[@]}" auth get-or-create mgr."$MGR_NAME" mon 'allow profile mgr' mds 'allow *' osd 'allow *' -o "$MGR_PATH"/keyring
   chown --verbose -R ceph. "$MGR_PATH"
 
   # start ceph-mgr
@@ -365,6 +347,20 @@ function bootstrap_sree {
 }
 
 
+#########
+# CRASH #
+#########
+function bootstrap_crash {
+  CRASH_NAME="client.crash"
+  mkdir -p /var/lib/ceph/crash/posted
+  ceph "${CLI_OPTS[@]}" auth get-or-create "${CRASH_NAME}" mon 'profile crash' mgr 'profile crash' -o /etc/ceph/"${CLUSTER}"."${CRASH_NAME}".keyring
+  chown --verbose -R ceph. /etc/ceph/"${CLUSTER}"."${CRASH_NAME}".keyring /var/lib/ceph/crash
+
+  # start ceph-crash
+  nohup ceph-crash -n "${CRASH_NAME}" &
+}
+
+
 ###################
 # BUILD BOOTSTRAP #
 ###################
@@ -377,7 +373,7 @@ function build_bootstrap {
   bootstrap_mgr
 
   if [[ "$DEMO_DAEMONS" == "all" ]]; then
-    daemons_list="osd mds rgw nfs rbd_mirror rest_api"
+    daemons_list="osd mds rgw nfs rbd_mirror rest_api crash"
   else
     # change commas to space
     comma_to_space=${DEMO_DAEMONS//,/ }
@@ -421,6 +417,9 @@ function build_bootstrap {
         ;;
       rest_api)
         bootstrap_rest_api
+        ;;
+      crash)
+        bootstrap_crash
         ;;
       *)
         log "ERROR: unknown scenario!"
