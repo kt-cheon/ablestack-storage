@@ -1,7 +1,7 @@
-FROM localhost/ceph/daemon:ablestack-allo-pacific-centos-8-x86_64
+FROM localhost/ceph/daemon:ablestack-bronto-pacific-centos-8-x86_64
 
 # Who is the maintainer ?
-LABEL maintainer="ablecloud <dsavinea@redhat.com>"
+LABEL maintainer="ablecloud <ablecloud@ablecloud.com>"
 
 # Is a ceph container ?
 LABEL ceph="True"
@@ -46,12 +46,11 @@ ADD *.sh check_zombie_mons.py ./osd_scenarios/* entrypoint.sh.in disabled_scenar
 # Copye sree web interface for cn
 # We use COPY instead of ADD for tarball so that it does not get extracted automatically at build time
 # COPY Sree-0.2.tar.gz /opt/ceph-container/tmp/sree.tar.gz
-# ABLESTACK Branding
 
-COPY ablestack-branding/ablestack_Logo_with_text_color_white.svg /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/assets/Ceph_Ceph_Logo_with_text_red_white.svg
-COPY ablestack-branding/ablestack_Logo_with_text_white.svg /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/assets/Ceph_Ceph_Logo_with_text_white.svg
-COPY ablestack-branding/ablestack_cloud_Logo.svg /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/assets/Ceph_Logo.svg
-COPY ablestack-branding/index.html /usr/share/ceph/mgr/dashboard/frontend/dist/en-US/
+# ABLESTACK Ceph-bronto install
+COPY ceph-bronto/ /ceph-bronto
+COPY /ceph-bronto/config /etc/selinux/config
+RUN dnf localinstall -y /ceph-bronto/*.rpm
 
 # Modify the entrypoint
 RUN bash "/opt/ceph-container/bin/generate_entrypoint.sh" && \
