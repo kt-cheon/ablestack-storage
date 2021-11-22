@@ -116,7 +116,7 @@ function dev_part {
     symdir=$(dirname "${osd_device}")
     local link=""
     local pfxlen=0
-    for option in ${symdir}/*; do
+    for option in "${symdir}"/*; do
       [[ -e $option ]] || break
       if [[ $(readlink -f "$option") == "$desired_partition" ]]; then
         local optprefixlen
@@ -142,9 +142,8 @@ function dev_part {
 function osd_trying_to_determine_scenario {
   : "${OSD_DEVICE:=none}"
   if [[ ${OSD_DEVICE} == "none" ]]; then
-    log "Bootstrapped OSD(s) found; using OSD directory"
-    source /opt/ceph-container/bin/osd_directory.sh
-    osd_directory
+    log "No device found, please provide one with OSD_DEVICE variable"
+    exit 1
   elif parted --script "${OSD_DEVICE}" print | grep -sqE '^ 1.*ceph data'; then
     log "Bootstrapped OSD found; activating ${OSD_DEVICE}"
     source /opt/ceph-container/bin/osd_disk_activate.sh
@@ -275,7 +274,7 @@ function apply_ceph_ownership_to_disks {
     fi
   fi
   if [[ ${OSD_BLUESTORE} -eq 1 ]]; then
-    dev_real_path=($(resolve_symlink "$OSD_BLUESTORE_BLOCK_WAL" "$OSD_BLUESTORE_BLOCK_DB"))
+    mapfile -t dev_real_path < <(resolve_symlink "$OSD_BLUESTORE_BLOCK_WAL" "$OSD_BLUESTORE_BLOCK_DB")
     for partition in $(list_dev_partitions "$OSD_DEVICE" "${dev_real_path[@]}"); do
       part_code=$(get_part_typecode "$partition")
       if [[ "$part_code" == "5ce17fce-4087-4169-b7ff-056cc58472be" ||
@@ -611,6 +610,6 @@ function dmcrypt_data_map() {
     fi
     LOCKBOX_UUID=$(get_part_uuid "${LOCKBOX_PART}")
     mount_lockbox "${DATA_UUID}" "${LOCKBOX_UUID}"
-    ceph-disk --setuser ceph --setgroup disk activate --dmcrypt --no-start-daemon ${DATA_PART} || true
+    ceph-disk --setuser ceph --setgroup disk activate --dmcrypt --no-start-daemon "${DATA_PART}" || true
   done
 }
