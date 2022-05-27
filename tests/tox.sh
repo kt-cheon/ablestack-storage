@@ -28,19 +28,6 @@ if command -v apt-get &>/dev/null; then
   sudo ln -sf "$(command -v python3.6)" /usr/bin/python3
 else
   sudo yum install -y docker xfsprogs
-  if ! command -v python3.6 &>/dev/null; then
-    sudo yum -y groupinstall development
-    sudo yum -y install https://repo.ius.io/ius-release-el7.rpm
-    sudo yum -y install python36u
-  fi
-  sudo ln -sf "$(command -v python3.6)" /usr/bin/python3
-
-  if ! systemctl status docker >/dev/null; then
-    # daemon doesn't start automatically after being installed
-    sudo systemctl restart docker
-  fi
-  # Allow running `docker` without sudo
-  sudo chgrp "$(whoami)" /var/run/docker.sock
 fi
 
 if [ -n "${REGISTRY_USERNAME}" ] && [ -n "${REGISTRY_PASSWORD}" ]; then
@@ -83,11 +70,11 @@ if [[ "$NIGHTLY" != 'TRUE' ]]; then
 fi
 
 echo "Building flavor $FLAVOR"
-make_output=$(make FLAVORS="$FLAVOR" stage) # Run staging to get DAEMON_IMAGE name
+make_output=$(make FLAVORS="$FLAVOR" BASEOS_TAG="stream8" BASEOS_REGISTRY="${REGISTRY}/centos" BASEOS_REPO="centos" stage) # Run staging to get DAEMON_IMAGE name
 daemon_image=$(echo "${make_output}" | grep " DAEMON_IMAGE ") # Find DAEMON_IMAGE line
 daemon_image="${daemon_image#*DAEMON_IMAGE*: }" # Remove DAEMON_IMAGE from beginning
 daemon_image="$(echo "${daemon_image}" | tr -s ' ')" # Remove whitespace
-make FLAVORS="$FLAVOR" BASEOS_REGISTRY="${REGISTRY}/centos" BASEOS_REPO="centos" build.parallel
+make FLAVORS="$FLAVOR" BASEOS_TAG="stream8" BASEOS_REGISTRY="${REGISTRY}/centos" BASEOS_REPO="centos" build.parallel
 
 # start a local docker registry
 docker run -d -p 5000:5000 --restart=always --name registry registry:2
@@ -95,8 +82,8 @@ docker run -d -p 5000:5000 --restart=always --name registry registry:2
 docker tag "${daemon_image}" localhost:5000/ceph/daemon:latest-master
 # this avoids a race condition between the tagging and the push
 # which causes this to sometimes fail when run by jenkins
-sleep 1
-docker --debug push localhost:5000/ceph/daemon:latest-master
+sleep 5
+docker push --tls-verify=false localhost:5000/ceph/daemon:latest-master
 
 cd "$CEPH_ANSIBLE_SCENARIO_PATH"
 bash "$TOXINIDIR"/ceph-ansible/tests/scripts/vagrant_up.sh --no-provision --provider="$VAGRANT_PROVIDER"
