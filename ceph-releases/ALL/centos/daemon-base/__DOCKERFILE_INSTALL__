@@ -76,7 +76,7 @@ bash -c ' \
     RELEASE_VER=1 ;\
     REPO_URL="http://download.ceph.com/rpm-${CEPH_VERSION}/el__ENV_[DISTRO_VERSION]__/"; \
   fi && \
-  rpm -Uvh "$REPO_URL/noarch/ceph-release-1-${RELEASE_VER}.el__ENV_[DISTRO_VERSION]__.noarch.rpm" && \
+ # rpm -Uvh "$REPO_URL/noarch/ceph-release-1-${RELEASE_VER}.el__ENV_[DISTRO_VERSION]__.noarch.rpm" && \
   if [[ __ENV_[DISTRO_VERSION]__ -eq 8 ]]; then \
     yum install -y dnf-plugins-core ; \
     yum copr enable -y tchaikov/python-scikit-learn ; \
