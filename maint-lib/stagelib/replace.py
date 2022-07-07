@@ -121,7 +121,8 @@ def do_variable_replace(replace_root_dir):
             # do not process the tarball
             # this prevents the following error:
             # UnicodeDecodeError: 'utf-8' codec can't decode byte 0x8b in position 1: invalid start byte
-            if "Sree-" in f:
+            print(f)
+            if "Sree-" in f or 'able' in f:
                 continue
             if re.match(VARIABLE_FILE_PATTERN, f):
                 logging.debug(PARENTHETICAL_LOGTEXT.format(
