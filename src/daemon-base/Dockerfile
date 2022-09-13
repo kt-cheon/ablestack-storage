@@ -21,6 +21,7 @@ __DOCKERFILE_PREINSTALL__
 # Escape char after immediately after RUN allows comment in first line
 RUN \
     echo -e "[glue]\nname=Glue\nbaseurl=http://mirror.ablecloud.io/centos/glue/\ngpgcheck=0\nenabled=1" > /etc/yum.repos.d/glue.repo &&\
+    echo -e "[glue-iscsi]\nname=Glue-iscsi\nbaseurl=http://mirror.ablecloud.io/centos/glue-iscsi/\ngpgcheck=0\nenabled=1" > /etc/yum.repos.d/glue-iscsi.repo &&\
     echo "nameserver 8.8.8.8" > /etc/resolve.conf && \
     # Install all components for the image, whether from packages or web downloads.
     # Typical workflow: add new repos; refresh repos; install packages; package-manager clean;
