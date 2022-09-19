@@ -51,7 +51,7 @@ OSD_FLAVOR=${OSD_FLAVOR:=default}
 
 if [ -z "$CEPH_RELEASES" ]; then
   # NEVER change 'master' position in the array, this will break the 'latest' tag
-  CEPH_RELEASES=(master octopus pacific)
+  CEPH_RELEASES=(master octopus pacific quincy)
 fi
 
 HOST_ARCH=$(uname -m)
@@ -222,6 +222,8 @@ function create_head_or_point_release {
       CEPH_RELEASES=(octopus)
     elif [ "${CONTAINER_BRANCH}" == "stable-6.0" ]; then
       CEPH_RELEASES=(pacific)
+    elif [ "${CONTAINER_BRANCH}" == "stable-7.0" ]; then
+      CEPH_RELEASES=(quincy)
     fi
   else
     set -e
@@ -233,9 +235,10 @@ function create_head_or_point_release {
 declare -F build_ceph_imgs  ||
 function build_ceph_imgs {
   echo "Build Ceph container image(s)"
+  CENTOS_RELEASE="$(_centos_release "${CEPH_BRANCH}")"
   if ${CI_CONTAINER}; then
     if [ -z "$CONTAINER_FLAVOR" ]; then
-      CONTAINER_FLAVOR=${CEPH_BRANCH},centos,$(_centos_release "${CEPH_BRANCH}")
+      CONTAINER_FLAVOR=${CEPH_BRANCH},centos,"${CENTOS_RELEASE}"
     else
       IFS="," read -r ceph_branch distro distro_release <<< "${CONTAINER_FLAVOR}"
       if [ "${ceph_branch}" != "${BRANCH}" ]; then
@@ -249,6 +252,7 @@ function build_ceph_imgs {
     fi
 
     make FLAVORS="${CONTAINER_FLAVOR}" \
+         BASEOS_TAG=stream"${CENTOS_RELEASE}" \
          CEPH_DEVEL="true" \
          OSD_FLAVOR=${OSD_FLAVOR} \
          RELEASE="${RELEASE}" \
@@ -256,7 +260,7 @@ function build_ceph_imgs {
          IMAGES_TO_BUILD=daemon-base \
          build.parallel
   else
-    make CEPH_DEVEL=${DEVEL} RELEASE="${RELEASE}" BASEOS_REGISTRY="${CONTAINER_REPO_HOSTNAME}/centos" BASEOS_REPO=centos TAG_REGISTRY="${CONTAINER_REPO_ORGANIZATION}" build.parallel
+    make BASEOS_TAG=stream"${CENTOS_RELEASE}" CEPH_DEVEL=${DEVEL} RELEASE="${RELEASE}" BASEOS_REGISTRY="${CONTAINER_REPO_HOSTNAME}/centos" BASEOS_REPO=centos TAG_REGISTRY="${CONTAINER_REPO_ORGANIZATION}" build.parallel
   fi
   docker images
 }
@@ -264,7 +268,7 @@ function build_ceph_imgs {
 declare -F push_ceph_imgs ||
 function push_ceph_imgs {
   echo "Push Ceph container image(s) to the registry"
-  make RELEASE="$RELEASE" BASEOS_REGISTRY="${CONTAINER_REPO_HOSTNAME}/centos" BASEOS_REPO=centos TAG_REGISTRY="${CONTAINER_REPO_ORGANIZATION}" push.parallel
+  make BASEOS_TAG=stream8 RELEASE="$RELEASE" BASEOS_REGISTRY="${CONTAINER_REPO_HOSTNAME}/centos" BASEOS_REPO=centos TAG_REGISTRY="${CONTAINER_REPO_ORGANIZATION}" push.parallel
 }
 
 declare -F build_and_push_latest_bis ||
@@ -274,14 +278,14 @@ function build_and_push_latest_bis {
   for ceph_release in "${CEPH_RELEASES[@]}"; do
     CENTOS_RELEASE=$(_centos_release "${ceph_release}")
     tag_bis="latest-bis-${ceph_release}"
-    make DAEMON_BASE_TAG="daemon-base:${tag_bis}" DAEMON_TAG="daemon:${tag_bis}" RELEASE="$CONTAINER_BRANCH"-bis FLAVORS="${ceph_release}",centos,"${CENTOS_RELEASE}" BASEOS_REGISTRY="${CONTAINER_REPO_HOSTNAME}/centos" BASEOS_REPO=centos TAG_REGISTRY="${CONTAINER_REPO_ORGANIZATION}" build
-    make DAEMON_BASE_TAG="daemon-base:${tag_bis}" DAEMON_TAG="daemon:${tag_bis}" RELEASE="$CONTAINER_BRANCH"-bis FLAVORS="${ceph_release}",centos,"${CENTOS_RELEASE}" BASEOS_REGISTRY="${CONTAINER_REPO_HOSTNAME}/centos" BASEOS_REPO=centos TAG_REGISTRY="${CONTAINER_REPO_ORGANIZATION}" push
+    make BASEOS_TAG=stream8 DAEMON_BASE_TAG="daemon-base:${tag_bis}" DAEMON_TAG="daemon:${tag_bis}" RELEASE="$CONTAINER_BRANCH"-bis FLAVORS="${ceph_release}",centos,"${CENTOS_RELEASE}" BASEOS_REGISTRY="${CONTAINER_REPO_HOSTNAME}/centos" BASEOS_REPO=centos TAG_REGISTRY="${CONTAINER_REPO_ORGANIZATION}" build
+    make BASEOS_TAG=stream8 DAEMON_BASE_TAG="daemon-base:${tag_bis}" DAEMON_TAG="daemon:${tag_bis}" RELEASE="$CONTAINER_BRANCH"-bis FLAVORS="${ceph_release}",centos,"${CENTOS_RELEASE}" BASEOS_REGISTRY="${CONTAINER_REPO_HOSTNAME}/centos" BASEOS_REPO=centos TAG_REGISTRY="${CONTAINER_REPO_ORGANIZATION}" push
   done
 
   # Now let's build the latest
   CENTOS_RELEASE=$(_centos_release "${CEPH_RELEASES[-1]}")
-  make DAEMON_BASE_TAG="daemon-base:latest-bis" DAEMON_TAG="daemon:latest-bis" RELEASE="$CONTAINER_BRANCH"-bis FLAVORS="${CEPH_RELEASES[-1]}",centos,"${CENTOS_RELEASE}" BASEOS_REGISTRY="${CONTAINER_REPO_HOSTNAME}/centos" BASEOS_REPO=centos TAG_REGISTRY="${CONTAINER_REPO_ORGANIZATION}" build
-  make DAEMON_BASE_TAG="daemon-base:latest-bis" DAEMON_TAG="daemon:latest-bis" RELEASE="$CONTAINER_BRANCH"-bis FLAVORS="${CEPH_RELEASES[-1]}",centos,"${CENTOS_RELEASE}" BASEOS_REGISTRY="${CONTAINER_REPO_HOSTNAME}/centos" BASEOS_REPO=centos TAG_REGISTRY="${CONTAINER_REPO_ORGANIZATION}" push
+  make BASEOS_TAG=stream8 DAEMON_BASE_TAG="daemon-base:latest-bis" DAEMON_TAG="daemon:latest-bis" RELEASE="$CONTAINER_BRANCH"-bis FLAVORS="${CEPH_RELEASES[-1]}",centos,"${CENTOS_RELEASE}" BASEOS_REGISTRY="${CONTAINER_REPO_HOSTNAME}/centos" BASEOS_REPO=centos TAG_REGISTRY="${CONTAINER_REPO_ORGANIZATION}" build
+  make BASEOS_TAG=stream8 DAEMON_BASE_TAG="daemon-base:latest-bis" DAEMON_TAG="daemon:latest-bis" RELEASE="$CONTAINER_BRANCH"-bis FLAVORS="${CEPH_RELEASES[-1]}",centos,"${CENTOS_RELEASE}" BASEOS_REGISTRY="${CONTAINER_REPO_HOSTNAME}/centos" BASEOS_REPO=centos TAG_REGISTRY="${CONTAINER_REPO_ORGANIZATION}" push
 }
 
 declare -F push_ceph_imgs_latest ||
@@ -296,8 +300,8 @@ function push_ceph_imgs_latest {
       IFS="," read -r ceph_branch distro distro_release <<< "${CONTAINER_FLAVOR}"
     fi
     # local_tag should match with daemon_img defined in maint-lib/makelib.mk
-    local_tag=${CONTAINER_REPO_ORGANIZATION}/daemon-base:${RELEASE}-${CEPH_VERSION}-${distro}-${distro_release}-${HOST_ARCH}
-    full_repo_tag=${CONTAINER_REPO_HOSTNAME}/${CONTAINER_REPO_ORGANIZATION}/ceph:${RELEASE}-${distro}-${distro_release}-${HOST_ARCH}-devel
+    local_tag=${CONTAINER_REPO_ORGANIZATION}/daemon-base:${RELEASE}-${CEPH_VERSION}-${distro}-stream${distro_release}-${HOST_ARCH}
+    full_repo_tag=${CONTAINER_REPO_HOSTNAME}/${CONTAINER_REPO_ORGANIZATION}/ceph:${RELEASE}-${distro}-stream${distro_release}-${HOST_ARCH}-devel
     branch_repo_tag=${CONTAINER_REPO_HOSTNAME}/${CONTAINER_REPO_ORGANIZATION}/ceph:${BRANCH}
     sha1_repo_tag=${CONTAINER_REPO_HOSTNAME}/${CONTAINER_REPO_ORGANIZATION}/ceph:${SHA1}
     # add aarch64 suffix for short tags to allow coexisting arches
@@ -337,7 +341,7 @@ function push_ceph_imgs_latest {
       latest_name="${latest_name}-devel"
     fi
     for i in daemon-base daemon; do
-      tag=${CONTAINER_REPO_ORGANIZATION}/$i:${CONTAINER_BRANCH}-${CONTAINER_SHA}-$release-centos-$(_centos_release "${release}")-${HOST_ARCH}
+      tag=${CONTAINER_REPO_ORGANIZATION}/$i:${CONTAINER_BRANCH}-${CONTAINER_SHA}-$release-centos-stream$(_centos_release "${release}")-${HOST_ARCH}
       # tag image
       docker tag "$tag" "${CONTAINER_REPO_ORGANIZATION}"/$i:"$latest_name"
 
@@ -356,7 +360,7 @@ function wait_for_arm_images {
   echo "Waiting for ARM64 images to be ready"
   set -e
   CENTOS_RELEASE=$(_centos_release "${CEPH_RELEASES[-1]}")
-  until docker pull "${CONTAINER_REPO_ORGANIZATION}"/daemon:"$RELEASE"-"${CEPH_RELEASES[-1]}"-centos-"${CENTOS_RELEASE}"-aarch64; do
+  until docker pull "${CONTAINER_REPO_ORGANIZATION}"/daemon:"$RELEASE"-"${CEPH_RELEASES[-1]}"-centos-stream"${CENTOS_RELEASE}"-aarch64; do
     echo -n .
     sleep 30
   done
@@ -371,7 +375,7 @@ function create_registry_manifest {
   rm -rvf ~/.docker/manifests
   for image in daemon-base daemon; do
     for ceph_release in "${CEPH_RELEASES[@]}"; do
-      TARGET_RELEASE="${CONTAINER_REPO_ORGANIZATION}/${image}:${RELEASE}-${ceph_release}-centos-$(_centos_release "${ceph_release}")"
+      TARGET_RELEASE="${CONTAINER_REPO_ORGANIZATION}/${image}:${RELEASE}-${ceph_release}-centos-stream$(_centos_release "${ceph_release}")"
       DOCKER_IMAGES="$TARGET_RELEASE ${TARGET_RELEASE}-x86_64"
 
       # Let's add ARM images if being built

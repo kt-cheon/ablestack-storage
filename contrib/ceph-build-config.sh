@@ -13,8 +13,8 @@ trap 'exit $?' ERR
 # These build scripts don't need to have the aarch64 part of the distro specified
 # I.e., specifying 'luminous,centos-arm64,7' is not necessary for aarch64 builds; these scripts
 #       will do the right build. See configurable CENTOS_AARCH64_FLAVOR_DISTRO below
-X86_64_FLAVORS_TO_BUILD="octopus,centos,8 pacific,centos,8"
-AARCH64_FLAVORS_TO_BUILD="octopus,centos,8 pacific,centos,8"
+X86_64_FLAVORS_TO_BUILD="octopus,centos,8 pacific,centos,8 quincy,centos,8"
+AARCH64_FLAVORS_TO_BUILD="octopus,centos,8 pacific,centos,8 quincy,centos,8"
 
 # Allow running this script with the env var ARCH='aarch64' to build arm images
 # ARCH='x86_64'
@@ -160,7 +160,7 @@ function get_base_image_full_tag () {
   local distro_release ; distro_release="$(extract_distro_release "${flavor}")"
   case $distro in
     centos)
-      echo "${default_library}/centos:${distro_release}"
+      echo "${default_library}/centos:stream${distro_release}"
       return ;;
     *)
       error "get_base_image_full_tag - unknown distro '${distro}'"
@@ -237,7 +237,7 @@ function get_ceph_versions_on_server () {
   # <a href="ceph-12.2.7-0.el7.x86_64.rpm">ceph-12.2.7-0.el7.x86_64.rpm</a>  17-Jul-2018 14:11  3024
   # The ceph base package can be id'ed uniquely by the text ">ceph-" followed by a version string
   # Only match stable releases which are identified by the minor number '2'
-  local pkg_regex=">ceph-[0-9]+.[2].[0-9]+-[0-9]+"
+  local pkg_regex=">ceph-[0-9]+.[12].[0-9]+-[0-9]+"
   # pkg_list is returned in the form ">ceph-12.2.0 >ceph-12.2.1 >ceph-12.2.2 ..."
   local pkg_list
   # Make sure the versions are sorted. This should always be the case, but it's better to be safe.
@@ -400,18 +400,31 @@ function full_tag_exists () {
   local tag="${full_tag##*:}"
   local tag_minus_library="${full_tag##*/}"
   local repository="${tag_minus_library%:*}"
-  local tag_query_url="${PUSH_REGISTRY_URL}/repository/${PUSH_LIBRARY}/${repository}/tag/${tag}/images"
-  if curl --silent --fail --list-only --show-error --location "${tag_query_url}" &> /dev/null ; then
-    local retval=$?
-  else
-    local retval=$?
-    info "full_tag_exists - GET from ${tag_query_url} did not succeed - retval: ${retval}"
-  fi
+  local tag_query_url="${PUSH_REGISTRY_URL}/repository/${PUSH_LIBRARY}/${repository}/tag/?specificTag=${tag}"
+  local retval
+  local response
+
   if [ -n "${TEST_RUN:-}" ]; then
     test_info "full_tag_exists - returning that tag ${full_tag} does not exist"
     return 1  # always return that the tag doesn't exist for test runs
   fi
-  return "${retval}"
+
+  response=$(curl --silent --fail --list-only --show-error --location "${tag_query_url}")
+  retval=$?
+
+  if [ ${retval} -eq 0 ]; then
+    if [ "$(jq '.tags | length' <<< "${response}")" -gt 0 ]; then
+      # at least one tag exist
+      return 0
+    else
+      # the tag does not exist
+      return 1
+    fi
+  else
+    # curl command is failing so exiting the script
+    info "full_tag_exists - GET from ${tag_query_url} did not succeed - retval: ${retval}"
+    exit ${retval}
+  fi
 }
 
 
