@@ -18,10 +18,7 @@
 
 # When updating these defaults, be sure to check that ALL_BUILDABLE_FLAVORS is updated
 FLAVORS ?= \
-	octopus,centos,8 \
-	pacific,centos,8 \
 	quincy,centos,8 \
-	master,centos,8
 
 TAG_REGISTRY ?= ceph
 
@@ -48,11 +45,7 @@ include maint-lib/makelib.mk
 
 # All flavor options that can be passed to FLAVORS
 ALL_BUILDABLE_FLAVORS := \
-	octopus,centos,7 \
-	octopus,centos,8 \
-	pacific,centos,8 \
-	quincy,centos,8 \
-	master,centos,8
+	quincy,centos,8
 
 # ==============================================================================
 # Build targets
@@ -153,7 +146,7 @@ TARGETS:
   Help:
     help              Print this help message.
     show.flavors      Show all flavor options to FLAVORS.
-    flavors.modified  Show the flavors impacted by this branch's changes vs origin/master.
+    flavors.modified  Show the flavors impacted by this branch's changes vs origin/main.
                       All buildable flavors are staged for this test.
                       The env var VS_BRANCH can be set to compare vs a different branch.
 
@@ -172,9 +165,9 @@ OPTIONS:
                        (e.g., opensuse/"42.3", centos/"7")
     e.g., make FLAVORS="luminous,opensuse,42.3" ...
 
-	It is also possible to build a container running the latest development release (master).
+	It is also possible to build a container running the latest development release (main).
 	This is only available on centos with the following command :
-		make FLAVORS="master,centos,7"
+		make FLAVORS="main,centos,7"
 
   RELEASE - The release version to integrate in the tag. If omitted, set to the branch name.
 
@@ -213,4 +206,4 @@ show.flavors:
 	@echo $(ALL_BUILDABLE_FLAVORS)
 
 flavors.modified:
-	@ALL_BUILDABLE_FLAVORS="$(ALL_BUILDABLE_FLAVORS)" maint-lib/flavors-modified-vs-master.py
+	@ALL_BUILDABLE_FLAVORS="$(ALL_BUILDABLE_FLAVORS)" maint-lib/flavors-modified-vs-main.py

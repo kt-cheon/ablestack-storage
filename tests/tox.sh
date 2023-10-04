@@ -22,6 +22,8 @@ export WORKSPACE=$WORKSPACE
 export CEPH_ANSIBLE_SCENARIO_PATH=$CEPH_ANSIBLE_SCENARIO_PATH
 EOF
 
+sudo -s bash -c 'find /tmp -name pause.pid -uid $SUDO_UID -delete'
+
 # Check distro and install deps
 if command -v apt-get &>/dev/null; then
   sudo apt-get install -y --force-yes docker.io xfsprogs python3.6
@@ -38,6 +40,7 @@ rm -rf "$WORKSPACE"/ceph-ansible || true
 git clone -b "$CEPH_ANSIBLE_BRANCH" --single-branch https://github.com/ceph/ceph-ansible.git ceph-ansible
 
 pip install -r "$TOXINIDIR"/ceph-ansible/tests/requirements.txt
+ansible-galaxy install -r "${TOXINIDIR}"/ceph-ansible/requirements.yml -v
 
 bash "$WORKSPACE"/travis-builds/purge_cluster.sh
 # XXX purge_cluster only stops containers, it doesn't really remove them so try to
@@ -50,7 +53,7 @@ fi
 
 cd "$WORKSPACE"
 # we test the latest stable release of Ceph in priority
-FLAVOR="master,centos,8"
+FLAVOR="main,centos,8"
 
 # build everything that was touched to make sure build succeeds
 mapfile -t FLAVOR_ARRAY < <(make flavors.modified)
@@ -79,11 +82,22 @@ make FLAVORS="$FLAVOR" BASEOS_TAG="stream8" BASEOS_REGISTRY="${REGISTRY}/centos"
 # start a local docker registry
 docker run -d -p 5000:5000 --restart=always --name registry registry:2
 # add the image we just built to the registry
-docker tag "${daemon_image}" localhost:5000/ceph/daemon:latest-master
+docker tag "${daemon_image}" localhost:5000/ceph/daemon:latest-main
 # this avoids a race condition between the tagging and the push
 # which causes this to sometimes fail when run by jenkins
 sleep 5
-docker push --tls-verify=false localhost:5000/ceph/daemon:latest-master
+docker push --tls-verify=false localhost:5000/ceph/daemon:latest-main
+
+# allow vagrant VMs to reach this registry
+if sudo firewall-cmd --state; then
+  if ! sudo firewall-cmd --list-all-zones | grep -q "cephciregistry (active)"; then
+    echo "Creating firewalld zone to allow vagrant VMs access to localhost:5000 registry"
+    sudo firewall-cmd --new-zone=cephciregistry --permanent
+    sudo firewall-cmd --zone=cephciregistry --add-port=5000/tcp --permanent
+    sudo firewall-cmd --zone=cephciregistry --add-source=192.168.121.0/24 --permanent
+    sudo firewall-cmd --reload
+  fi
+fi
 
 cd "$CEPH_ANSIBLE_SCENARIO_PATH"
 bash "$TOXINIDIR"/ceph-ansible/tests/scripts/vagrant_up.sh --no-provision --provider="$VAGRANT_PROVIDER"
@@ -99,7 +113,7 @@ if [[ $CEPH_ANSIBLE_SCENARIO_PATH =~ "all_daemons" ]]; then
 fi
 ansible-playbook -vv -i "$CEPH_ANSIBLE_SCENARIO_PATH"/hosts "$TOXINIDIR"/ceph-ansible/tests/functional/lvm_setup.yml "${ANSIBLE_PLAYBOOK_ARGS[@]}"
 ansible-playbook -vv -i "$CEPH_ANSIBLE_SCENARIO_PATH"/hosts "$TOXINIDIR"/ceph-ansible/tests/functional/setup.yml
-ansible-playbook -vv -i "$CEPH_ANSIBLE_SCENARIO_PATH"/hosts "$TOXINIDIR"/ceph-ansible/site-container.yml.sample --extra-vars="ceph_docker_image_tag=latest-master ceph_docker_registry=$REGISTRY_ADDRESS ceph_docker_image=ceph/daemon"
+ansible-playbook -vv -i "$CEPH_ANSIBLE_SCENARIO_PATH"/hosts "$TOXINIDIR"/ceph-ansible/site-container.yml.sample --extra-vars="ceph_docker_image_tag=latest-main ceph_docker_registry=$REGISTRY_ADDRESS ceph_docker_image=ceph/daemon yes_i_know=true"
 
 py.test --reruns 20 --reruns-delay 3 -n 8 --sudo -v --connection=ansible --ansible-inventory="$CEPH_ANSIBLE_SCENARIO_PATH"/hosts --ssh-config="$CEPH_ANSIBLE_SCENARIO_PATH"/vagrant_ssh_config "$TOXINIDIR"/ceph-ansible/tests/functional/tests
 
