@@ -1,32 +1,19 @@
-# CEPH DAEMON BASE IMAGE
+# CEPH DAEMON IMAGE
 
-FROM __ENV_[BASE_IMAGE]__
-
-ENV I_AM_IN_A_CONTAINER 1
+FROM __ENV_[DAEMON_BASE_IMAGE]__
 
 __DOCKERFILE_TRACEABILITY_LABELS__
-
-ENV CEPH_VERSION __ENV_[CEPH_VERSION]__
-ENV CEPH_POINT_RELEASE "__ENV_[CEPH_POINT_RELEASE]__"
-ENV CEPH_DEVEL __ENV_[CEPH_DEVEL]__
-ENV CEPH_REF __ENV_[CEPH_REF]__
-ENV OSD_FLAVOR __ENV_[OSD_FLAVOR]__
 
 #======================================================
 # Install ceph and dependencies, and clean up
 #======================================================
-
 __DOCKERFILE_PREINSTALL__
 
 # Escape char after immediately after RUN allows comment in first line
 RUN \
-    # ABLESTACK Repository
-    echo -e "[Glue]\nname=Glue\nbaseurl=http://mirror.ablecloud.io/ablecloud/pub/glue/\ngpgcheck=0\nenabled=1" > /etc/yum.repos.d/glue.repo &&\
-    echo "nameserver 8.8.8.8" > /etc/resolve.conf && \
     # Install all components for the image, whether from packages or web downloads.
     # Typical workflow: add new repos; refresh repos; install packages; package-manager clean;
     #   download and install packages from web, cleaning any files as you go.
-    # Installs should support install of ganesha for luminous
     __DOCKERFILE_INSTALL__ && \
     # Clean container, starting with record of current size (strip / from end)
     INITIAL_SIZE="$(bash -c 'sz="$(du -sm --exclude=/proc /)" ; echo "${sz%*/}"')" && \
@@ -34,8 +21,8 @@ RUN \
     #
     # Perform any final cleanup actions like package manager cleaning, etc.
     __DOCKERFILE_POSTINSTALL_CLEANUP__ && \
-    # Tweak some configuration files on the container system
-    __DOCKERFILE_POSTINSTALL_TWEAKS__ && \
+    # Clean daemon-specific files
+    __DOCKERFILE_CLEAN_DAEMON__ && \
     # Clean common files like /tmp, /var/lib, etc.
     __DOCKERFILE_CLEAN_COMMON__ && \
     #
@@ -48,3 +35,32 @@ RUN \
     #
     # Verify that the packages installed haven't been accidentally cleaned
     __DOCKERFILE_VERIFY_PACKAGES__ && echo 'Packages verified successfully'
+
+#======================================================
+# Add ceph-container files
+#======================================================
+
+# Add s3cfg file
+ADD s3cfg /root/.s3cfg
+
+# Add templates for confd
+ADD ./confd/templates/* /etc/confd/templates/
+ADD ./confd/conf.d/* /etc/confd/conf.d/
+
+# Add bootstrap script, ceph defaults key/values for KV store
+ADD *.sh check_zombie_mons.py ./osd_scenarios/* entrypoint.sh.in disabled_scenario /opt/ceph-container/bin/
+ADD ceph.defaults /opt/ceph-container/etc/
+# ADD *.sh ceph.defaults check_zombie_mons.py ./osd_scenarios/* entrypoint.sh.in disabled_scenario /
+
+# Copye sree web interface for cn
+# We use COPY instead of ADD for tarball so that it does not get extracted automatically at build time
+COPY Sree-0.2.tar.gz /opt/ceph-container/tmp/sree.tar.gz
+
+# Modify the entrypoint
+RUN bash "/opt/ceph-container/bin/generate_entrypoint.sh" && \
+  rm -f /opt/ceph-container/bin/generate_entrypoint.sh && \
+  bash -n /opt/ceph-container/bin/*.sh
+
+# Execute the entrypoint
+WORKDIR /
+ENTRYPOINT ["/opt/ceph-container/bin/entrypoint.sh"]

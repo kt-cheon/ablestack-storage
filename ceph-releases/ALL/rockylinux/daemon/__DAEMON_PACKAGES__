@@ -1,0 +1,5 @@
+\
+          sharutils \
+          lsof \
+          __CONFD_PACKAGE__ \
+          __S3CMD_PACKAGE__
