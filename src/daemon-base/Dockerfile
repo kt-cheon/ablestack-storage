@@ -21,8 +21,11 @@ __DOCKERFILE_PREINSTALL__
 # Escape char after immediately after RUN allows comment in first line
 RUN \
     # ABLESTACK Repository
-    echo -e "[Glue]\nname=Glue\nbaseurl=http://mirror.ablecloud.io/ablecloud/pub/glue/\ngpgcheck=0\nenabled=1" > /etc/yum.repos.d/glue.repo &&\
+    echo -e "[Glue]\nname=Glue\nbaseurl=http://mirror.ablecloud.io/ablecloud/pub/glue/\ngpgcheck=0\nenabled=1" > /etc/yum.repos.d/glue.repo && \
+    echo -e "[Epel]\nname=epel\nbaseurl=http://mirror.ablecloud.io/ablecloud/pub/epel/9/Everything/x86_64/\ngpgcheck=0\nenabled=1" > /etc/yum.repos.d/epel.repo && \
     echo "nameserver 8.8.8.8" > /etc/resolve.conf && \
+    wget https://mirror.ablecloud.io/ablecloud/pub/glue/Packages/python3-kubernetes-11.0.0-6.el8.noarch.rpm && \
+    rpm -ivh python3-kubernetes-11.0.0-6.el8.noarch.rpm && \
     # Install all components for the image, whether from packages or web downloads.
     # Typical workflow: add new repos; refresh repos; install packages; package-manager clean;
     #   download and install packages from web, cleaning any files as you go.

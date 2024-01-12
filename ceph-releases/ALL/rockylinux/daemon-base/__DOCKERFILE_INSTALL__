@@ -1,4 +1,5 @@
 yum install -y epel-release && \
+echo -e "[Epel]\nname=epel\nbaseurl=http://mirror.ablecloud.io/ablecloud/pub/epel/9/Everything/x86_64/\ngpgcheck=0\nenabled=1" > /etc/yum.repos.d/epel.repo && \
 yum install -y jq && \
 bash -c ' \
   if [ -n "__GANESHA_PACKAGES__" ]; then \
@@ -89,11 +90,5 @@ bash -c ' \
     yum copr enable -y tchaikov/python-scikit-learn ; \
     yum copr enable -y tchaikov/python3-asyncssh ; \
   fi ' && \
-yum install -y --setopt=install_weak_deps=False __CEPH_BASE_PACKAGES__ ; \
-wget http://mirror.ablecloud.io/ablecloud/pub/glue/Packages/kubernetes-client-v28.1.0.tar.gz ; \
-tar xvf kubernetes-client-v28.1.0.tar.gz ; \
-cd python-28.1.0 ; \
-python3 setup.py install ; \
-cd - ; \
-rm -rf kubernetes-client-v28.1.0.tar.gz python-28.1.0
+yum install -y --setopt=install_weak_deps=False __CEPH_BASE_PACKAGES__
 
