@@ -1,5 +1,5 @@
 yum install -y epel-release && \
-echo -e "[Epel]\nname=epel\nbaseurl=http://mirror.ablecloud.io/ablecloud/pub/epel/9/Everything/x86_64/\ngpgcheck=0\nenabled=1" > /etc/yum.repos.d/epel.repo && \
+echo -e "[Epel]\nname=epel\nbaseurl=http://mirror.ablecloud.io/pub/epel/9/Everything/x86_64/\ngpgcheck=0\nenabled=1" > /etc/yum.repos.d/epel.repo && \
 yum install -y jq && \
 bash -c ' \
   if [ -n "__GANESHA_PACKAGES__" ]; then \
