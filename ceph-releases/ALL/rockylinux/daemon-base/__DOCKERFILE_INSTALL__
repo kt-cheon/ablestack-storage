@@ -1,4 +1,5 @@
 yum install -y epel-release && \
+echo -e "[Epel]\nname=epel\nbaseurl=http://mirror.ablecloud.io/pub/epel/9/Everything/x86_64/\ngpgcheck=0\nenabled=1" > /etc/yum.repos.d/epel.repo && \
 yum install -y jq && \
 bash -c ' \
   if [ -n "__GANESHA_PACKAGES__" ]; then \
@@ -90,3 +91,4 @@ bash -c ' \
     yum copr enable -y tchaikov/python3-asyncssh ; \
   fi ' && \
 yum install -y --setopt=install_weak_deps=False __CEPH_BASE_PACKAGES__
+
